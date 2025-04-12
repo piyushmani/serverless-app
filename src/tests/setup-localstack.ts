@@ -26,7 +26,8 @@ export async function setupLocalStackResources() {
         BillingMode: 'PAY_PER_REQUEST'
       }).promise();
       console.log('Created DynamoDB table');
-    } catch (e) {
+    } catch (e: any) {
+      
       if (e.code === 'ResourceInUseException') {
         console.log('DynamoDB table already exists');
       } else {
@@ -40,7 +41,7 @@ export async function setupLocalStackResources() {
         Bucket: 'my-typescript-app-local-bucket'
       }).promise();
       console.log('Created S3 bucket');
-    } catch (e) {
+    } catch (e: any) {
       if (e.code === 'BucketAlreadyExists' || e.code === 'BucketAlreadyOwnedByYou') {
         console.log('S3 bucket already exists');
       } else {
@@ -54,7 +55,7 @@ export async function setupLocalStackResources() {
         QueueName: 'my-typescript-app-local-queue'
       }).promise();
       console.log('Created SQS queue');
-    } catch (e) {
+    } catch (e: any) {
       console.log('Error creating SQS queue:', e.message);
       throw e;
     }
@@ -65,7 +66,7 @@ export async function setupLocalStackResources() {
         Name: 'my-typescript-app-local-topic'
       }).promise();
       console.log('Created SNS topic');
-    } catch (e) {
+    } catch (e: any) {
       console.log('Error creating SNS topic:', e.message);
       throw e;
     }

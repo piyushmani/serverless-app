@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { setupLocalStackResources, teardownLocalStackResources } from './setup-localstack';
 
 // LocalStack endpoint for API Gateway (this is a simulation as LocalStack's API Gateway behaves differently)
@@ -20,10 +20,11 @@ describe('API Integration Tests with LocalStack', () => {
       // Simple test to check if LocalStack is responding
       const response = await axios.get(`${apiEndpoint}/health`);
       expect(response.status).toBe(200);
-    } catch (error) {
+    } catch (error  ) {
+      const e = error as AxiosError;
       // LocalStack's health endpoint might not be available, which is okay
       // We just want to make sure LocalStack is running
-      expect(error.code).not.toBe('ECONNREFUSED');
+      expect(e.code).not.toBe('ECONNREFUSED');
     }
   });
 
