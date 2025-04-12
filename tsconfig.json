@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "es2019",
+    "module": "commonjs",
+    "lib": ["es2019"],
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "outDir": ".build",
+    "rootDir": "./",
+    "strict": true,
+    "noImplicitAny": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@functions/*": ["src/functions/*"],
+      "@libs/*": ["src/libs/*"]
+    }
+  },
+  "include": ["src/**/*", "serverless.ts"],
+  "exclude": ["node_modules/**/*", ".serverless/**/*", ".webpack/**/*", ".build/**/*"]
+}

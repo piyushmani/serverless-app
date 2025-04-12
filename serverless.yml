@@ -1,0 +1,164 @@
+service: my-typescript-app
+
+frameworkVersion: '3'
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-offline
+  - serverless-localstack
+
+custom:
+  stage: ${opt:stage, self:provider.stage}
+  region: ${opt:region, self:provider.region}
+  tableName: ${self:service}-${self:custom.stage}-table
+  bucketName: ${self:service}-${self:custom.stage}-bucket
+  queueName: ${self:service}-${self:custom.stage}-queue
+  topicName: ${self:service}-${self:custom.stage}-topic
+
+  # LocalStack configuration
+  localstack:
+    stages:
+      - local
+      - dev
+      - test
+    host: http://localhost
+    edgePort: 4566
+    autostart: true
+    docker:
+      sudo: false
+    lambda:
+      mountCode: true
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  stage: dev
+  region: us-east-1
+  memorySize: 256
+  timeout: 30
+  environment:
+    NODE_ENV: ${self:custom.stage}
+    IS_LOCAL: ${opt:is-local, false}
+    DYNAMODB_TABLE: ${self:custom.tableName}
+    S3_BUCKET: ${self:custom.bucketName}
+    SQS_QUEUE_URL: !Ref MySQSQueue
+    SNS_TOPIC_ARN: !Ref MySNSTopic
+    LOCALSTACK_HOSTNAME: ${env:LOCALSTACK_HOSTNAME, 'localhost'}
+  
+  # IAM role statements for your Lambda functions
+  iam:
+    role:
+      statements:
+        # DynamoDB permissions
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: !GetAtt MyDynamoDBTable.Arn
+        
+        # S3 permissions
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+            - s3:ListBucket
+          Resource: 
+            - !Join ['', ['arn:aws:s3:::', !Ref MyS3Bucket]]
+            - !Join ['', ['arn:aws:s3:::', !Ref MyS3Bucket, '/*']]
+        
+        # SQS permissions
+        - Effect: Allow
+          Action:
+            - sqs:SendMessage
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+            - sqs:GetQueueAttributes
+          Resource: !GetAtt MySQSQueue.Arn
+        
+        # SNS permissions
+        - Effect: Allow
+          Action:
+            - sns:Publish
+          Resource: !Ref MySNSTopic
+
+package:
+  individually: true
+  excludeDevDependencies: true
+  patterns:
+    - '!node_modules/**'
+    - '!.git/**'
+    - '!.vscode/**'
+    - '!.serverless/**'
+    - '!.build/**'
+    - '!tests/**'
+
+functions:
+  api:
+    handler: src/functions/api.handler
+    events:
+      - http:
+          path: /api
+          method: get
+          cors: true
+      - http:
+          path: /api/{id}
+          method: get
+          cors: true
+      - http:
+          path: /api
+          method: post
+          cors: true
+  
+  processQueue:
+    handler: src/functions/queue.handler
+    events:
+      - sqs:
+          arn: !GetAtt MySQSQueue.Arn
+          batchSize: 10
+
+resources:
+  Resources:
+    # DynamoDB Table
+    MyDynamoDBTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.tableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+    
+    # S3 Bucket
+    MyS3Bucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.bucketName}
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders: ['*']
+              AllowedMethods: [GET, PUT, POST, DELETE, HEAD]
+              AllowedOrigins: ['*']
+              MaxAge: 3000
+    
+    # SQS Queue
+    MySQSQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.queueName}
+        VisibilityTimeout: 60
+        MessageRetentionPeriod: 345600 # 4 days
+    
+    # SNS Topic
+    MySNSTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: ${self:custom.topicName}
+        DisplayName: My Service Notifications

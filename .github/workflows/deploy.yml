@@ -1,0 +1,143 @@
+name: CI/CD Pipeline with LocalStack
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # STAGE 1: BUILD
+  build:
+    name: Build & Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Lint code
+        run: npm run lint
+      
+      - name: Build TypeScript code
+        run: npm run build
+      
+      - name: Cache build artifacts
+        uses: actions/cache@v3
+        with:
+          path: |
+            .build
+            node_modules
+          key: ${{ runner.os }}-build-${{ github.sha }}
+  
+  # STAGE 2: TEST
+  test:
+    name: Unit & Integration Tests
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          cache: 'npm'
+      
+      - name: Restore cached build
+        uses: actions/cache@v3
+        with:
+          path: |
+            .build
+            node_modules
+          key: ${{ runner.os }}-build-${{ github.sha }}
+      
+      - name: Run unit tests
+        run: npm test
+      
+      - name: Start LocalStack and setup resources
+        run: |
+          chmod +x ./scripts/start-localstack.sh
+          npm run ci:start-localstack
+      
+      - name: Run integration tests with LocalStack
+        env:
+          IS_LOCAL: "true"
+          LOCALSTACK_HOSTNAME: "localhost"
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_REGION: us-east-1
+        run: npm run test:integration
+  
+  # STAGE 3: DEPLOY (To LocalStack)
+  deploy:
+    name: Deploy to LocalStack
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          cache: 'npm'
+      
+      - name: Restore cached build
+        uses: actions/cache@v3
+        with:
+          path: |
+            .build
+            node_modules
+          key: ${{ runner.os }}-build-${{ github.sha }}
+      
+      - name: Install AWS CLI
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+      
+      - name: Start LocalStack environment
+        run: |
+          chmod +x ./scripts/start-localstack.sh
+          npm run ci:start-localstack
+      
+      - name: Deploy to LocalStack
+        run: |
+          chmod +x ./scripts/deploy-localstack.sh
+          npm run ci:deploy-localstack
+      
+      - name: Verify deployment
+        env:
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_REGION: us-east-1
+        run: |
+          # List deployed resources
+          echo "Listing Lambda functions..."
+          aws --endpoint-url=http://localhost:4566 lambda list-functions
+          
+          echo "Listing S3 buckets..."
+          aws --endpoint-url=http://localhost:4566 s3 ls
+          
+          echo "Listing DynamoDB tables..."
+          aws --endpoint-url=http://localhost:4566 dynamodb list-tables
+          
+          echo "Listing SQS queues..."
+          aws --endpoint-url=http://localhost:4566 sqs list-queues
+          
+          echo "Listing SNS topics..."
+          aws --endpoint-url=http://localhost:4566 sns list-topics

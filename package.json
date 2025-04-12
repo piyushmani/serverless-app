@@ -1,0 +1,36 @@
+{
+  "name": "my-typescript-app",
+  "version": "1.0.0",
+  "scripts": {
+  "build": "tsc",
+  "lint": "eslint . --ext .ts",
+  "test": "jest --testPathIgnorePatterns=integration",
+  "test:integration": "jest --testMatch='**/*.integration.test.ts'",
+  "start:local": "IS_LOCAL=true serverless offline start",
+  "deploy:local": "IS_LOCAL=true serverless deploy --stage local",
+  "remove:local": "IS_LOCAL=true serverless remove --stage local",
+  "start:localstack": "./scripts/start-localstack.sh",
+  "deploy:localstack": "./scripts/deploy-localstack.sh",
+  "local": "npm run start:localstack && npm run deploy:localstack && npm run start:local",
+  "ci:start-localstack": "./scripts/start-localstack.sh",
+  "ci:deploy-localstack": "./scripts/deploy-localstack.sh"
+},
+  "dependencies": {
+    "aws-sdk": "^2.1055.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.85",
+    "@types/jest": "^27.0.3",
+    "@types/node": "^16.11.12",
+    "@typescript-eslint/eslint-plugin": "^5.6.0",
+    "@typescript-eslint/parser": "^5.6.0",
+    "eslint": "^8.4.1",
+    "jest": "^27.4.5",
+    "serverless": "^3.0.0",
+    "serverless-localstack": "^0.4.35",
+    "serverless-offline": "^8.3.1",
+    "serverless-plugin-typescript": "^2.1.0",
+    "ts-jest": "^27.1.1",
+    "typescript": "^4.5.4"
+  }
+}
