@@ -9,13 +9,15 @@ on:
 jobs:
   # STAGE 1: Lint
   build:
-    name:  Lint
+    name: Lint
     runs-on: ubuntu-latest
     
-    steps:
-      - name: Checkout code
-      - uses: ./.github/actions/setup-node-with-cache
-      - run: npm run lint
+    steps:    
+      - name: Setup Node with cache
+        uses: ./.github/actions/setup-node-with-cache
+        
+      - name: Run linting
+        run: npm run lint
   
   # STAGE 2: TEST
   test:
@@ -23,10 +25,12 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     
-    steps:
-      - name: unit test
-      - uses: ./.github/actions/setup-node-with-cache
-      - run: echo "hello unit test"
+    steps:     
+      - name: Setup Node with cache
+        uses: ./.github/actions/setup-node-with-cache
+        
+      - name: Run unit tests
+        run: echo "hello unit test"
       
       - name: Start LocalStack and setup resources
         run: |
@@ -48,10 +52,9 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     
-    steps:
-      - name: Checkout code
-      - uses: ./.github/actions/setup-node-with-cache
-  
+    steps:    
+      - name: Setup Node with cache
+        uses: ./.github/actions/setup-node-with-cache
       
       - name: Start LocalStack environment
         run: |
