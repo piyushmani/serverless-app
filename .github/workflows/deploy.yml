@@ -12,7 +12,10 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     
-    steps:    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
       - name: Setup Node with cache
         uses: ./.github/actions/setup-node-with-cache
         
@@ -25,7 +28,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     
-    steps:     
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
       - name: Setup Node with cache
         uses: ./.github/actions/setup-node-with-cache
         
@@ -52,7 +58,10 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     
-    steps:    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
       - name: Setup Node with cache
         uses: ./.github/actions/setup-node-with-cache
       
