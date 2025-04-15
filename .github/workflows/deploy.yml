@@ -7,37 +7,15 @@ on:
     branches: [ main, master ]
 
 jobs:
-  # STAGE 1: BUILD
+  # STAGE 1: Lint
   build:
-    name: Build & Lint
+    name:  Lint
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Lint code
-        run: npm run lint
-      
-      - name: Build TypeScript code
-        run: npm run build
-      
-      - name: Cache build artifacts
-        uses: actions/cache@v3
-        with:
-          path: |
-            .build
-            node_modules
-          key: ${{ runner.os }}-build-${{ github.sha }}
+      - uses: ./.github/actions/setup-node-with-cache
+      - run: npm run lint
   
   # STAGE 2: TEST
   test:
@@ -46,25 +24,9 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: Restore cached build
-        uses: actions/cache@v3
-        with:
-          path: |
-            .build
-            node_modules
-          key: ${{ runner.os }}-build-${{ github.sha }}
-      
-      - name: Run unit tests
-        run: echo "hello unit test"
+      - name: unit test
+      - uses: ./.github/actions/setup-node-with-cache
+      - run: echo "hello unit test"
       
       - name: Start LocalStack and setup resources
         run: |
@@ -88,21 +50,8 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-          cache: 'npm'
-      
-      - name: Restore cached build
-        uses: actions/cache@v3
-        with:
-          path: |
-            .build
-            node_modules
-          key: ${{ runner.os }}-build-${{ github.sha }}
+      - uses: ./.github/actions/setup-node-with-cache
+  
       
       - name: Start LocalStack environment
         run: |
