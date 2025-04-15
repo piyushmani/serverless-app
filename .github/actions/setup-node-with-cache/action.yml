@@ -3,9 +3,13 @@ description: 'Sets up Node.js with caching and installs dependencies'
 runs:
   using: "composite"
   steps:
-    - uses: actions/setup-node@v4
+    name: setup node 
+    id: nodesetup
+    uses: actions/setup-node@v4
       with:
         node-version: '20'
         cache: 'npm'
-    - run: npm ci
-      shell: bash
+
+    - name: Install dependencies
+      if: steps.nodesetup.outputs.cache-hit != 'true'
+      run: ls && npm ci
