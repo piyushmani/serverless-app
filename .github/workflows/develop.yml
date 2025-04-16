@@ -13,7 +13,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-node-with-cache
-      - run: echo "dev deploy done"
+      - run: |
+          chmod +x ./scripts/deploy-localstack.sh
+          npm run ci:deploy-localstack
       
   e2e-deploy:
     name: E2E Deploy
@@ -22,7 +24,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-node-with-cache
-      - run: echo "E2E deploy done"
+      - run: |
+          chmod +x ./scripts/deploy-localstack.sh
+          npm run ci:start-localstack
 
   e2e-test1:
     name: e2e-test-1
