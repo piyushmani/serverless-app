@@ -2,9 +2,9 @@ name: CI/CD Pipeline with LocalStack
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ notExist ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ notExist ]
 
 jobs:
   # STAGE 1: Lint
