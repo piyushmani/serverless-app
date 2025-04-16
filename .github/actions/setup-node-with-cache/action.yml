@@ -1,17 +1,27 @@
-name: 'Setup Node with Cache'
-description: 'Sets up Node.js with caching and installs dependencies'
+name: 'Setup Node with Smart Caching'
+description: 'Sets up Node.js, generates cache key from package-lock.json, and handles node_modules caching'
+
 runs:
   using: "composite"
   steps:
-    - name: Setup Node
-      id: nodesetup
+    - name: Generate cache key from package-lock.json
+      id: cache-key
+      shell: bash
+      run: echo "value=$(md5sum package-lock.json | awk '{print $1}')" >> $GITHUB_OUTPUT
+
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        cache: 'npm'
-
+    
+    - name: Cache node_modules
+      id: node-modules-cache
+      uses: actions/cache@v3
+      with:
+        path: node_modules
+        key: node-modules-cache-${{ steps.cache-key.outputs.value }}
+    
     - name: Install dependencies
-      if: steps.nodesetup.outputs.cache-hit != 'true'
+      if: steps.node-modules-cache.outputs.cache-hit != 'true'
       shell: bash
-      run: ls && npm ci
-
+      run: npm ci
