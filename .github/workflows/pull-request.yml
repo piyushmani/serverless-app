@@ -1,0 +1,55 @@
+# .github/workflows/pull-request.yml
+name: Pull Request Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: ['**']
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-node-with-cache
+        id: setup-node
+      - name: Run linting
+        run: npm run lint
+
+  unit-tests:
+    name: Unit Tests
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-node-with-cache
+        id: setup-node
+      - name: Run unit tests
+        run: echo "inside unit test"
+        
+  integration-test:
+    name: Integration Tests
+    needs: lint
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node with cache
+        uses: ./.github/actions/setup-node-with-cache
+      
+      - name: Start LocalStack and setup resources
+        run: |
+          chmod +x ./scripts/start-localstack.sh
+          npm run ci:start-localstack
+      
+      - name: Run integration tests with LocalStack
+        env:
+          IS_LOCAL: "true"
+          LOCALSTACK_HOSTNAME: "localhost"
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_REGION: us-east-1
+        run: echo "hello integration test test"

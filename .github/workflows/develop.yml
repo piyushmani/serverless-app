@@ -1,0 +1,61 @@
+# .github/workflows/develop.yml
+name: Develop Branch Pipeline
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  dev-deploy:
+    name: Dev Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-node-with-cache
+      - run: echo "dev deploy done"
+      
+  e2e-deploy:
+    name: E2E Deploy
+    needs: dev-deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-node-with-cache
+      - run: echo "E2E deploy done"
+
+  e2e-test1:
+    name: e2e-test-1
+    needs: e2e-deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-node-with-cache
+      - run: echo "E2E  test 1 done"
+  
+  e2e-test-2:
+    name: e2e-test-2
+    needs: e2e-deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-node-with-cache
+      - run: echo "E2E test 2 done"
+      
+  e2e-cleanup:
+    name: e2e-cleanup
+    needs: [e2e-test1, e2e-test-2]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-node-with-cache
+      - run: echo "E2E cleanup done"
+
+  notify-failure:
+    name: notify-failure
+    needs: e2e-cleanup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-node-with-cache
+      - run: echo "notify-failure done"    
