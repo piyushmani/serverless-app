@@ -1,0 +1,30 @@
+name: 'Example Composite Action with Inputs'
+description: 'A composite action that accepts inputs'
+inputs:
+  environment:
+    description: 'Environment name (e.g., dev, prod, uat)'
+    required: true
+  deploy_regions:
+    description: 'Comma-separated list of deployment regions'
+    required: true
+  aws_access_key_id:
+    description: 'AWS Access Key ID'
+    required: true
+  aws_secret_access_key:
+    description: 'AWS Secret Access Key'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Configure AWS Credentials
+      run: |
+        cd / && serverless config credentials \
+          --provider aws \
+          --key ${{ inputs.aws_access_key_id }} \
+          --secret ${{ inputs.aws_secret_access_key }} && cd -
+
+    - name: Deploy to Regions
+      run: |
+        for r in ${{ inputs.deploy_regions }}; do
+          SLS_DEBUG=* serverless deploy --verbose --force --stage ${{ inputs.environment }} --region $r;
+        done
