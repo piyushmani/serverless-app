@@ -18,4 +18,4 @@ jobs:
 
       - name: Deployment Script
         run: |
-          echo "Deploying to the stage environment..."
+          echo "Deploying to the stage environment...  "
