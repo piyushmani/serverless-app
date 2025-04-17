@@ -1,0 +1,21 @@
+name: Release Workflow
+
+on:
+  push:
+    branches:
+      - release/*
+      - hotfix/*
+
+jobs:
+  stage_deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: stage
+    steps:
+      # Add your deployment steps here
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deployment Script
+        run: |
+          echo "Deploying to the stage environment..."
