@@ -2,6 +2,7 @@
 name: Develop Branch Pipeline
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - master
