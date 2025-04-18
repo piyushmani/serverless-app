@@ -1,0 +1,59 @@
+# .github/workflows/preview_env_deploy.yml
+name: Preview Environment
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'deploy'
+        type: choice
+        options:
+          - deploy
+          - delete
+      environment_name:
+        description: 'Name for the preview environment'
+        required: true
+        default: 'preview-env'
+
+jobs:
+  preview-env-deploy:
+    name: Deploy Preview Environment
+    if: github.event.inputs.action == 'deploy'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node with cache
+        uses: ./.github/actions/setup-node-with-cache
+
+      - name: Deploy preview environment
+        run: |
+          echo "Deploying preview environment: ${{ github.event.inputs.environment_name }}"
+          # Add your deployment commands here
+          
+      - name: Output environment URL
+        run: |
+          echo "Preview environment deployed successfully!"
+          echo "Access your environment at: https://${{ github.event.inputs.environment_name }}.example.com"
+
+  preview-env-delete:
+    name: Delete Preview Environment
+    if: github.event.inputs.action == 'delete'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node with cache
+        uses: ./.github/actions/setup-node-with-cache
+
+      - name: Delete preview environment
+        run: |
+          echo "Deleting preview environment: ${{ github.event.inputs.environment_name }}"
+          # Add your deletion commands here
+          
+      - name: Confirmation
+        run: echo "Preview environment deleted successfully!"
