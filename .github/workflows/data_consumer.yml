@@ -1,0 +1,183 @@
+name: Data Consumer
+
+on:
+  workflow_run:
+    workflows: ["Data Producer"]
+    types:
+      - completed
+
+jobs:
+  process-data:
+    runs-on: ubuntu-latest
+    # Only run if the producer workflow succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Download artifacts from producer workflow
+      uses: actions/download-artifact@v4
+      with:
+        # Download from the specific workflow run that triggered this workflow
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        run-id: ${{ github.event.workflow_run.id }}
+        name: json-data
+        path: ./downloaded-data
+        
+    - name: Process JSON data
+      run: |
+        echo "Processing downloaded JSON data..."
+        
+        # Check what was downloaded
+        echo "Downloaded files:"
+        find ./downloaded-data -type f -name "*.json" | sort
+        
+        # Process each JSON file
+        for json_file in ./downloaded-data/*.json; do
+          if [ -f "$json_file" ]; then
+            filename=$(basename "$json_file")
+            echo "=== Processing $filename ==="
+            
+            # Pretty print the JSON
+            cat "$json_file" | jq '.'
+            
+            # Extract specific data based on file type
+            case "$filename" in
+              "build-info.json")
+                build_id=$(cat "$json_file" | jq -r '.build_id')
+                status=$(cat "$json_file" | jq -r '.status')
+                echo "Build ID: $build_id, Status: $status"
+                ;;
+              "test-results.json")
+                total_tests=$(cat "$json_file" | jq -r '.total_tests')
+                passed=$(cat "$json_file" | jq -r '.passed')
+                failed=$(cat "$json_file" | jq -r '.failed')
+                echo "Tests: $passed/$total_tests passed, $failed failed"
+                ;;
+              "deployment-config.json")
+                environment=$(cat "$json_file" | jq -r '.environment')
+                version=$(cat "$json_file" | jq -r '.version')
+                echo "Deploy: $version to $environment"
+                ;;
+            esac
+            echo
+          fi
+        done
+        
+    - name: Generate processed data
+      run: |
+        mkdir -p processed
+        
+        # Create a summary report combining all data
+        cat > processed/summary-report.json << EOF
+        {
+          "report_generated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+          "source_workflow": {
+            "id": "${{ github.event.workflow_run.id }}",
+            "name": "${{ github.event.workflow_run.name }}",
+            "conclusion": "${{ github.event.workflow_run.conclusion }}",
+            "head_sha": "${{ github.event.workflow_run.head_sha }}"
+          },
+          "processing_summary": {
+            "files_processed": $(find ./downloaded-data -name "*.json" | wc -l),
+            "processor_run_id": "${{ github.run_id }}",
+            "status": "completed"
+          }
+        }
+        EOF
+        
+        # Merge build info if available
+        if [ -f "./downloaded-data/build-info.json" ]; then
+          build_info=$(cat "./downloaded-data/build-info.json")
+          echo "$build_info" | jq '. + {"processed_by": "data-consumer", "processing_timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"}' > processed/enhanced-build-info.json
+        fi
+        
+        # Process test results if available
+        if [ -f "./downloaded-data/test-results.json" ]; then
+          test_results=$(cat "./downloaded-data/test-results.json")
+          pass_rate=$(echo "$test_results" | jq -r '(.passed / .total_tests * 100 | floor)')
+          echo "$test_results" | jq ". + {\"pass_rate_percent\": $pass_rate, \"quality_gate\": $([ $pass_rate -ge 80 ] && echo "true" || echo "false")}" > processed/enhanced-test-results.json
+        fi
+        
+        echo "Generated processed files:"
+        ls -la processed/
+        
+    - name: Upload processed artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: processed-data
+        path: processed/*.json
+        retention-days: 30
+        
+    - name: Create deployment decision
+      run: |
+        # Make deployment decision based on processed data
+        deploy_decision="false"
+        deploy_reason="Unknown"
+        
+        if [ -f "./processed/enhanced-test-results.json" ]; then
+          quality_gate=$(cat "./processed/enhanced-test-results.json" | jq -r '.quality_gate')
+          if [ "$quality_gate" = "true" ]; then
+            deploy_decision="true"
+            deploy_reason="Quality gate passed"
+          else
+            deploy_decision="false"
+            deploy_reason="Quality gate failed"
+          fi
+        fi
+        
+        cat > processed/deployment-decision.json << EOF
+        {
+          "deploy": $deploy_decision,
+          "reason": "$deploy_reason",
+          "decided_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+          "approver": "automated"
+        }
+        EOF
+        
+        echo "Deployment decision: $deploy_decision ($deploy_reason)"
+        
+    - name: Upload deployment decision
+      uses: actions/upload-artifact@v4
+      with:
+        name: deployment-decision
+        path: processed/deployment-decision.json
+        retention-days: 30
+        
+    - name: Create summary
+      run: |
+        echo "## Data Consumer Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- Source workflow: ${{ github.event.workflow_run.name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Source run ID: ${{ github.event.workflow_run.id }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Files processed: $(find ./downloaded-data -name "*.json" | wc -l)" >> $GITHUB_STEP_SUMMARY
+        echo "- Processing completed at: $(date -u)" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f "./processed/deployment-decision.json" ]; then
+          decision=$(cat "./processed/deployment-decision.json" | jq -r '.deploy')
+          reason=$(cat "./processed/deployment-decision.json" | jq -r '.reason')
+          echo "- Deployment decision: $decision ($reason)" >> $GITHUB_STEP_SUMMARY
+        fi
+
+  # Optional: Handle failed producer workflow
+  handle-failure:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    
+    steps:
+    - name: Handle producer failure
+      run: |
+        echo "Producer workflow failed. Taking remedial action..."
+        echo "Failed workflow: ${{ github.event.workflow_run.name }}"
+        echo "Run ID: ${{ github.event.workflow_run.id }}"
+        echo "Conclusion: ${{ github.event.workflow_run.conclusion }}"
+        
+        # Could send notifications, create issues, etc.
+        echo "## Producer Workflow Failed" >> $GITHUB_STEP_SUMMARY
+        echo "The data producer workflow failed and no data was processed." >> $GITHUB_STEP_SUMMARY
+        echo "Please check the failed workflow run for details." >> $GITHUB_STEP_SUMMARY
