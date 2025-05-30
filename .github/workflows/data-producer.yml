@@ -1,0 +1,55 @@
+name: Data Producer
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  generate-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Generate JSON data
+      run: |
+        # Create sample JSON data
+        mkdir -p output
+        
+        # Generate build info
+        cat > output/build-info.json << EOF
+        {
+          "build_id": "${{ github.run_id }}",
+          "commit_sha": "${{ github.sha }}",
+          "branch": "${{ github.ref_name }}",
+          "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+          "workflow": "data-producer",
+          "status": "success",
+          "artifacts": {
+            "count": 3,
+            "types": ["build-info", "test-results", "deployment-config"]
+          }
+        }
+        EOF 
+
+        
+    - name: Upload individual artifacts (alternative approach)
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-info
+        path: output/build-info.json
+        retention-days: 30
+        
+    - name: Create summary
+      run: |
+        echo "## Data Producer Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- Build ID: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Branch: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Generated 3 JSON files successfully" >> $GITHUB_STEP_SUMMARY
