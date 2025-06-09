@@ -11,7 +11,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       'Access-Control-Allow-Credentials': true,
     };
 
-    // GET /api
+    // GET /api code
     if (event.httpMethod === 'GET' && event.pathParameters === null) {
       // Scan DynamoDB for all items
       const result = await dynamoDb.scan({
