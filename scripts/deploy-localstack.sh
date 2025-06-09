@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Deploying to LocalStack..."
+echo "Deploying to docker LocalStack..."
 
 # Set environment variables for LocalStack
 export IS_LOCAL=true
