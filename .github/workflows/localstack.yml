@@ -9,7 +9,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Start LocalStack
-        uses: LocalStack/setup-localstack@v0.2.3
+        uses: LocalStack/setup-localstack@vv0.2.4
         with:
           image-tag: 'latest'
           install-awslocal: 'true'
@@ -25,7 +25,7 @@ jobs:
           echo "Test Execution complete!"
 
       - name: Save LocalStack State
-        uses: LocalStack/setup-localstack@v0.2.3
+        uses: LocalStack/setup-localstack@v0.2.4
         with:
           state-backend: local
           state-action: save
