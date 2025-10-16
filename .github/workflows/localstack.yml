@@ -15,8 +15,6 @@ jobs:
           install-awslocal: 'true'
           configuration: DEBUG=1
           state-backend: local
-          state-action: load
-          state-name: my-cloud-pod
 
       - name: Run Tests against LocalStack
         run: |
